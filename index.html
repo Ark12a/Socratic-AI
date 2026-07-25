@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socratic AI | Arkadyuti</title>
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #050505;
+            --bg-surface: #121212;
+            --primary: #4F46E5;
+            --primary-glow: rgba(79, 70, 229, 0.5);
+            --secondary: #06b6d4;
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Glow */
+        .bg-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--primary-glow) 0%, rgba(0,0,0,0) 70%);
+            top: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0.4;
+            z-index: 0;
+            pointer-events: none;
+            animation: pulse-glow 8s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.3; transform: translateX(-50%) scale(1); }
+            100% { opacity: 0.6; transform: translateX(-50%) scale(1.2); }
+        }
+
+        /* Top Header */
+        header {
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            background: linear-gradient(180deg, rgba(5,5,5,0.9) 0%, rgba(5,5,5,0) 100%);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo i {
+            color: var(--primary);
+            font-size: 24px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .developer-badge {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.05);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Small Outline Button for Logout */
+        .btn-small-outline {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none; /* Initially hidden */
+        }
+        
+        .btn-small-outline:hover {
+            background: rgba(239, 68, 68, 0.1);
+            box-shadow: 0 0 10px var(--danger-glow);
+        }
+
+        /* Main Chat Area */
+        .chat-wrapper {
+            flex: 1; 
+            min-height: 0; 
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .welcome-screen {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 100%;
+            transition: opacity 0.5s ease;
+        }
+
+        .welcome-screen h1 {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(to right, #fff, #a1a1aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .welcome-screen p {
+            color: var(--text-muted);
+            font-size: 18px;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+        
+        .session-count {
+            font-size: 14px;
+            color: var(--secondary);
+            font-weight: 500;
+            background: rgba(6, 182, 212, 0.1);
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        #chatBox {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px 20px 140px 20px; 
+            display: none;
+            flex-direction: column;
+            gap: 24px;
+            scroll-behavior: smooth;
+        }
+
+        #chatBox::-webkit-scrollbar {
+            width: 4px;
+        }
+        #chatBox::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+
+        /* Chat Bubbles */
+        .chat-message {
+            max-width: 80%;
+            padding: 16px 20px;
+            font-size: 16px;
+            line-height: 1.6;
+            animation: slideIn 0.3s ease forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary), #3b82f6);
+            color: white;
+            border-radius: 20px 20px 4px 20px;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+        }
+
+        .msg-agent {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px 20px 20px 4px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Floating Control Dock */
+        .dock-container {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background: rgba(18, 18, 18, 0.8);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 100px;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .status-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 150px;
+        }
+
+        .orb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .orb.active {
+            background: var(--secondary);
+            box-shadow: 0 0 15px var(--secondary);
+            animation: breathe 2s infinite alternate;
+        }
+
+        @keyframes breathe {
+            from { transform: scale(0.9); opacity: 0.8; }
+            to { transform: scale(1.2); opacity: 1; }
+        }
+
+        .status-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .btn-main {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 28px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .btn-main:hover {
+            background: #4338ca;
+            transform: translateY(-2px);
+        }
+
+        .btn-main:disabled {
+            background: #4b5563;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-end {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 28px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px var(--danger-glow);
+        }
+
+        .btn-end:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        /* --- LOGIN MODAL CSS --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            z-index: 100;
+            display: none; 
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-box {
+            background: rgba(18, 18, 18, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-overlay.show .modal-box {
+            transform: translateY(0);
+        }
+
+        .modal-box h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .modal-box p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 14px 20px;
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-full {
+            flex: 1;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-full:hover {
+            background: #4338ca;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+        
+        .btn-outline {
+            flex: 1;
+            background: transparent;
+            color: white;
+            border: 1px solid var(--primary);
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline:hover {
+            background: rgba(79, 70, 229, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-glow"></div>
+
+    <header>
+        <div class="logo">
+            <i class="ri-brain-line"></i> Socratic AI
+        </div>
+        <div class="header-actions">
+            <div class="developer-badge">
+                Developed by Algo Rangers
+            </div>
+            <!-- Logout Button -->
+            <button id="topLogoutBtn" class="btn-small-outline" onclick="logoutUser()">Logout</button>
+        </div>
+    </header>
+
+    <div class="chat-wrapper">
+        <div class="welcome-screen" id="welcomeScreen">
+            <h1>Ready to learn?</h1>
+            <p>Start a voice session to begin exploring.</p>
+            <div class="session-count" id="sessionDisplay">Free Sessions Left: 3</div>
+        </div>
+
+        <div id="chatBox"></div>
+    </div>
+
+    <!-- Floating Dock -->
+    <div class="dock-container">
+        <div class="status-area">
+            <div class="orb" id="statusOrb"></div>
+            <span class="status-text" id="statusText">System Ready</span>
+        </div>
+        
+        <button class="btn-main" id="connectBtn">
+            <i class="ri-mic-line"></i> Start Session
+        </button>
+        
+        <button class="btn-end" id="disconnectBtn">
+            <i class="ri-stop-circle-line"></i> End Session
+        </button>
+    </div>
+
+    <!-- LOGIN MODAL -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-box">
+            <i class="ri-lock-2-line" style="font-size: 40px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
+            <h2>Limit Reached</h2>
+            <p>You have used all 3 free sessions. Please log in or register to continue learning.</p>
+            
+            <div class="input-group">
+                <input type="email" class="input-field" placeholder="Email address" id="emailInput">
+                <input type="password" class="input-field" placeholder="Password" id="passwordInput">
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button class="btn-full" onclick="loginUser()">Log In</button>
+                <button class="btn-outline" onclick="registerUser()">Register</button>
+            </div>
+            
+            <p id="auth-message" style="font-size: 14px; font-weight: 500; height: 20px;"></p>
+        </div>
+    </div>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const statusText = document.getElementById('statusText');
+        const statusOrb = document.getElementById('statusOrb');
+        const chatBox = document.getElementById('chatBox');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const loginModal = document.getElementById('loginModal');
+        const sessionDisplay = document.getElementById('sessionDisplay');
+        const authMessage = document.getElementById('auth-message');
+        const topLogoutBtn = document.getElementById('topLogoutBtn');
+        
+        let room; 
+        
+        // --- BACKEND API URL ---
+        const API_URL = "http://localhost:8000"; 
+        
+        // --- SESSION TRACKING LOGIC ---
+        const MAX_FREE_SESSIONS = 3;
+        
+        // Check local storage, default to 0 if new user
+        let currentSessions = parseInt(localStorage.getItem('ai_tutor_usage') || '0');
+        let isLoggedIn = localStorage.getItem('ai_tutor_logged_in') === 'true';
+
+        // Update UI Text on load
+        function updateSessionUI() {
+            if (isLoggedIn) {
+                sessionDisplay.innerText = "Premium Account Active";
+                sessionDisplay.style.color = "#10b981";
+                sessionDisplay.style.background = "rgba(16, 185, 129, 0.1)";
+                topLogoutBtn.style.display = "block"; // Show logout button
+            } else {
+                let left = MAX_FREE_SESSIONS - currentSessions;
+                sessionDisplay.innerText = `Free Sessions Left: ${left > 0 ? left : 0}`;
+                sessionDisplay.style.color = "var(--secondary)";
+                sessionDisplay.style.background = "rgba(6, 182, 212, 0.1)";
+                topLogoutBtn.style.display = "none"; // Hide logout button
+            }
+        }
+        updateSessionUI();
+
+        function logoutUser() {
+            localStorage.removeItem('ai_tutor_logged_in');
+            localStorage.setItem('ai_tutor_usage', '0'); 
+            window.location.reload(); 
+        }
+
+        // ==========================================
+        // AUTHENTICATION FUNCTIONS (PostgreSQL + FastAPI)
+        // ==========================================
+        
+        async function registerUser() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            
+            if(!email || !password) {
+                authMessage.innerText = "Please enter both email and password.";
+                authMessage.style.color = "var(--danger)";
+                return;
+            }
+
+            try {
+                authMessage.innerText = "Registering...";
+                authMessage.style.color = "var(--text-muted)";
+                
+                const response = await fetch(`${API_URL}/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authMessage.innerText = "Registration successful! You can now log in.";
+                    authMessage.style.color = "#10b981"; // Success Green
+                } else {
+                    authMessage.innerText = data.detail; // Error from FastAPI
+                    authMessage.style.color = "var(--danger)";
+                }
+            } catch (error) {
+                authMessage.innerText = "Server error. Is the backend running?";
+                authMessage.style.color = "var(--danger)";
+            }
+        }
+
+        async function loginUser() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            
+            if(!email || !password) {
+                authMessage.innerText = "Please enter both email and password.";
+                authMessage.style.color = "var(--danger)";
+                return;
+            }
+
+            try {
+                authMessage.innerText = "Logging in...";
+                authMessage.style.color = "var(--text-muted)";
+                
+                const response = await fetch(`${API_URL}/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authMessage.innerText = "Login successful!";
+                    authMessage.style.color = "#10b981";
+                    
+                    localStorage.setItem('ai_tutor_logged_in', 'true');
+                    isLoggedIn = true;
+                    
+                    setTimeout(() => {
+                        loginModal.classList.remove('show');
+                        updateSessionUI();
+                        authMessage.innerText = "";
+                        connectBtn.click();
+                    }, 1000);
+                    
+                } else {
+                    authMessage.innerText = data.detail;
+                    authMessage.style.color = "var(--danger)";
+                }
+            } catch (error) {
+                authMessage.innerText = "Server error. Is the backend running?";
+                authMessage.style.color = "var(--danger)";
+            }
+        }
+
+        // ==========================================
+        // UI & LIVEKIT WEBRTC LOGIC
+        // ==========================================
+        
+        function setStatus(text, type) {
+            statusText.innerText = text;
+            if(type === 'loading') {
+                statusOrb.style.background = '#fbbf24';
+                statusOrb.style.boxShadow = '0 0 10px #fbbf24';
+                statusOrb.classList.add('active');
+            } else if(type === 'active') {
+                statusOrb.style.background = '#10b981';
+                statusOrb.style.boxShadow = '0 0 15px #10b981';
+                statusOrb.classList.add('active');
+            } else {
+                statusOrb.style.background = '#a1a1aa';
+                statusOrb.style.boxShadow = 'none';
+                statusOrb.classList.remove('active');
+            }
+        }
+
+        connectBtn.onclick = async () => {
+            if (!isLoggedIn && currentSessions >= MAX_FREE_SESSIONS) {
+                loginModal.classList.add('show');
+                return; 
+            }
+
+            try {
+                connectBtn.disabled = true;
+                setStatus("Connecting...", "loading");
+                
+                // FIXED: Har session mein unique participant name bhejna
+                const uniqueId = "student_" + Math.floor(Math.random() * 100000);
+                const uniqueRoom = "tutor_room_" + Math.floor(Math.random() * 100000); // Har baar naya room
+
+                // API call mein participant name aur room name DONO bhejenge
+                const response = await fetch(`${API_URL}/get-token?participant_name=${uniqueId}&room_name=${uniqueRoom}`);
+                const data = await response.json();
+                
+                room = new LivekitClient.Room();
+                
+                room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+                    if (track.kind === 'audio') {
+                        const element = track.attach();
+                        document.body.appendChild(element);
+                    }
+                });
+
+                room.on(LivekitClient.RoomEvent.TranscriptionReceived, (transcriptions, participant) => {
+                    for (const tx of transcriptions) {
+                        let msgEl = document.getElementById('msg-' + tx.id);
+                        
+                        if (!msgEl) {
+                            msgEl = document.createElement('div');
+                            msgEl.id = 'msg-' + tx.id;
+                            msgEl.classList.add('chat-message');
+                            
+                            if (participant && participant.isLocal) {
+                                msgEl.classList.add('msg-user');
+                            } else {
+                                msgEl.classList.add('msg-agent');
+                            }
+                            chatBox.appendChild(msgEl);
+                        }
+                        
+                        msgEl.innerText = tx.text;
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                });
+                
+                const livekitUrl = "wss://ai-tutor-nui36urh.livekit.cloud"; 
+                
+                await room.connect(livekitUrl, data.token);
+                await room.startAudio();
+                await room.localParticipant.setMicrophoneEnabled(true);
+                
+                if (!isLoggedIn) {
+                    currentSessions++;
+                    localStorage.setItem('ai_tutor_usage', currentSessions);
+                    updateSessionUI();
+                }
+                
+                welcomeScreen.style.opacity = "0";
+                setTimeout(() => { welcomeScreen.style.display = "none"; }, 500);
+                
+                chatBox.style.display = "flex";
+                connectBtn.style.display = "none";
+                disconnectBtn.style.display = "flex";
+                setStatus("Listening...", "active");
+
+            } catch (error) {
+                console.error("Connection failed:", error);
+                connectBtn.disabled = false;
+                setStatus("Connection Failed", "error");
+            }
+        };
+
+        // FIXED: Graceful UI reset without page reload
+        disconnectBtn.onclick = async () => {
+            if (room) {
+                setStatus("Disconnecting...", "loading");
+                await room.disconnect();
+                room = null;
+            }
+            
+            // Clean up the UI
+            chatBox.innerHTML = ''; 
+            chatBox.style.display = "none";
+            
+            welcomeScreen.style.display = "block";
+            setTimeout(() => { welcomeScreen.style.opacity = "1"; }, 50);
+            
+            disconnectBtn.style.display = "none";
+            connectBtn.style.display = "flex";
+            connectBtn.disabled = false;
+            
+            setStatus("System Ready", "idle");
+        };
+    </script>
+</body>
+</html>

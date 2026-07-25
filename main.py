@@ -1,0 +1,71 @@
+import os
+from dotenv import load_dotenv
+from livekit.agents import (
+    Agent,
+    AgentServer,
+    AgentSession,
+    JobContext,
+    cli,
+)
+from livekit.plugins import openai, silero, cartesia
+
+load_dotenv()
+
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+
+# 1. OPTIMIZATION: VAD Model ko global scope mein pehle hi load kar rahe hain.
+# Isse jab user "Start" dabayega, toh model ready milega aur delay khatam ho jayega.
+print("--> Loading Silero VAD Model into memory...")
+SHARED_VAD = silero.VAD.load(min_silence_duration=0.5)
+print("--> VAD Model Loaded Successfully!")
+
+server = AgentServer()
+
+@server.rtc_session()
+async def entrypoint(ctx: JobContext):
+    # Pre-configured STT, LLM aur TTS objects
+    stt_plugin = openai.STT(
+        model="whisper-large-v3", 
+        base_url=GROQ_BASE_URL
+    )
+    
+    llm_plugin = openai.LLM(
+        model="llama-3.3-70b-versatile", 
+        base_url=GROQ_BASE_URL
+    )
+    
+    tts_plugin = cartesia.TTS()
+
+    session = AgentSession(
+        vad=SHARED_VAD, 
+        stt=stt_plugin,
+        llm=llm_plugin,
+        tts=tts_plugin
+    )
+
+    # NAYA TEACHER PROMPT YAHAN UPDATE KIYA GAYA HAI
+    agent = Agent(
+        instructions=(
+            "You are a friendly, expert, and encouraging AI tutor. Your goal is to help the student learn effectively. "
+            "You are an intelligent and helpful AI assistant. "
+            "CRITICAL RULE: When a user asks a question, YOU MUST DIRECTLY PROVIDE THE ANSWER FIRST. "
+            "DO NOT reply with a counter-question or say 'Let's start with...'. "
+            "Follow this exact format for every response: "
+            "1. DIRECT ANSWER: Give a clear, factual answer in 1-2 sentences immediately. "
+            "2. Answer: Give a clear, factual answer in 1-2 sentences immediately. (Do not literally say 'Answer:' or 'Direct Answer:') "
+            "3. EXPLANATION: Add a tiny bit of context or an interesting fact. "
+            # "3. ENGAGEMENT: Only at the very end of your response, ask a single relevant question to keep the conversation going. "
+            "Keep it completely conversational and very short."
+        )
+    )
+
+    print(f"--> Connecting agent to the room: {ctx.room.name}...")
+    await session.start(agent=agent, room=ctx.room)
+    print("--> Agent connected successfully!")
+    
+    await session.generate_reply(
+        instructions="Greet the user explicitly by saying: 'Hi! What are we studying today?'"
+    )
+
+if __name__ == "__main__":
+    cli.run_app(server)
