@@ -93,3 +93,4 @@ livekit-api
 livekit-agents
 livekit-plugins-openai
 livekit-plugins-cartesia
+livekit-plugins-silero
