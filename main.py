@@ -8,7 +8,29 @@ from livekit.agents import (
     cli,
 )
 from livekit.plugins import openai, silero, cartesia
+import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
+# --- DUMMY SERVER HACK FOR RENDER FREE TIER ---
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"Socratic AI Worker is Alive and Running!")
+
+def start_dummy_server():
+    # Render automatically provides a PORT environment variable
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server.serve_forever()
+
+# Start the dummy server in a background thread
+threading.Thread(target=start_dummy_server, daemon=True).start()
+# ----------------------------------------------
+
+# (Yahan se aapka baaki ka AI agent wala code shuru hoga...)
 load_dotenv()
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
