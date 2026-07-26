@@ -79,6 +79,7 @@ async def entrypoint(ctx: JobContext):
     )
 
     agent = Agent(
+        name="socratic-tutor",  # <--- Yeh naam add karna hai
         instructions=(
             "You are a friendly, expert, and encouraging AI tutor. Your goal is to help the student learn effectively. "
             "CRITICAL RULE: When a user asks a question, YOU MUST DIRECTLY PROVIDE THE ANSWER FIRST. "
