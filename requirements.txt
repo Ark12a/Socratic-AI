@@ -98,3 +98,8 @@ webcolors==25.10.0
 webencodings==0.5.1
 websocket-client==1.9.0
 Werkzeug==3.1.6
+livekit
+livekit-agents
+livekit-plugins-openai
+livekit-plugins-silero
+livekit-plugins-deepgram
