@@ -86,21 +86,27 @@ def login_user(user: UserAuth):
     conn = get_db_connection()
     cur = conn.cursor()
     
-    cur.execute("SELECT password_hash, session_count FROM users WHERE email = %s", (user.email,))
-    result = cur.fetchone()
-    
-    cur.close()
-    conn.close()
+    try:
+        # Sirf password_hash select kar rahe hain taaki missing column ka error na aaye
+        cur.execute("SELECT password_hash FROM users WHERE email = %s", (user.email,))
+        result = cur.fetchone()
+    except Exception as e:
+        print(f"Database error during login: {e}")
+        conn.rollback()
+        result = None
+    finally:
+        cur.close()
+        conn.close()
     
     if result:
         stored_hash = result[0]
-        session_count = result[1]
         
+        # Password verify karna
         if bcrypt.checkpw(user.password.encode('utf-8'), stored_hash.encode('utf-8')):
             return {
                 "message": "Login successful", 
-                "session_count": session_count,
                 "status": "success"
             }
             
+    # Agar email nahi mila ya password galat hai
     raise HTTPException(status_code=401, detail="Invalid email or password")
