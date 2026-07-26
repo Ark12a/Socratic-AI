@@ -10,7 +10,8 @@ from livekit.agents import (
     JobContext,
     cli,
 )
-from livekit.plugins import openai, silero, cartesia
+# Note: Yahan se cartesia hata diya gaya hai
+from livekit.plugins import openai, silero 
 
 # --- DUMMY SERVER HACK FOR RENDER FREE TIER ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -26,8 +27,6 @@ def start_dummy_server():
         server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
         server.serve_forever()
     except OSError:
-        # Jab LiveKit naya worker banayega, toh port pehle se busy hoga.
-        # Hum is error ko ignore kar denge taaki crash na ho.
         print(f"Port {port} already in use, skipping dummy server for this process.")
         pass
 
@@ -37,6 +36,7 @@ threading.Thread(target=start_dummy_server, daemon=True).start()
 
 load_dotenv()
 
+# Groq ka base URL
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 print("--> Loading Silero VAD Model into memory...")
@@ -47,18 +47,27 @@ server = AgentServer()
 
 @server.rtc_session()
 async def entrypoint(ctx: JobContext):
-    # Pre-configured STT, LLM aur TTS objects
+    
+    # 1. STT (Kaan) aur LLM (Dimaag) ke liye hum GROQ_API_KEY use karenge
     stt_plugin = openai.STT(
         model="whisper-large-v3", 
-        base_url=GROQ_BASE_URL
+        base_url=GROQ_BASE_URL,
+        api_key=os.environ.get("GROQ_API_KEY") 
     )
     
     llm_plugin = openai.LLM(
         model="llama-3.3-70b-versatile", 
-        base_url=GROQ_BASE_URL
+        base_url=GROQ_BASE_URL,
+        api_key=os.environ.get("GROQ_API_KEY")
     )
     
-    tts_plugin = cartesia.TTS()
+    # 2. TTS (Aawaz) ke liye hum asali OPENAI_API_KEY use karenge
+    # Aap voice ko 'alloy', 'echo', 'fable', 'onyx', 'nova', ya 'shimmer' mein change kar sakte hain
+    tts_plugin = openai.TTS(
+        model="tts-1",
+        voice="alloy",
+        api_key=os.environ.get("OPENAI_API_KEY")
+    )
 
     session = AgentSession(
         vad=SHARED_VAD, 
@@ -88,7 +97,6 @@ async def entrypoint(ctx: JobContext):
     )
 
 if __name__ == "__main__":
-    # Render par script run hote waqt 'start' command auto-inject karna
     if len(sys.argv) == 1:
         sys.argv.append("start")
         
