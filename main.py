@@ -1,5 +1,8 @@
 import os
+import sys
+import threading
 from dotenv import load_dotenv
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from livekit.agents import (
     Agent,
     AgentServer,
@@ -8,9 +11,6 @@ from livekit.agents import (
     cli,
 )
 from livekit.plugins import openai, silero, cartesia
-import os
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # --- DUMMY SERVER HACK FOR RENDER FREE TIER ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -30,7 +30,6 @@ def start_dummy_server():
 threading.Thread(target=start_dummy_server, daemon=True).start()
 # ----------------------------------------------
 
-# (Yahan se aapka baaki ka AI agent wala code shuru hoga...)
 load_dotenv()
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
@@ -76,7 +75,6 @@ async def entrypoint(ctx: JobContext):
             "1. DIRECT ANSWER: Give a clear, factual answer in 1-2 sentences immediately. "
             "2. Answer: Give a clear, factual answer in 1-2 sentences immediately. (Do not literally say 'Answer:' or 'Direct Answer:') "
             "3. EXPLANATION: Add a tiny bit of context or an interesting fact. "
-            # "3. ENGAGEMENT: Only at the very end of your response, ask a single relevant question to keep the conversation going. "
             "Keep it completely conversational and very short."
         )
     )
@@ -90,4 +88,8 @@ async def entrypoint(ctx: JobContext):
     )
 
 if __name__ == "__main__":
+    # Render par script run hote waqt 'start' command auto-inject karna
+    if len(sys.argv) == 1:
+        sys.argv.append("start")
+        
     cli.run_app(server)
