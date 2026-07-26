@@ -21,10 +21,15 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"Socratic AI Worker is Alive and Running!")
 
 def start_dummy_server():
-    # Render automatically provides a PORT environment variable
     port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-    server.serve_forever()
+    try:
+        server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+        server.serve_forever()
+    except OSError:
+        # Jab LiveKit naya worker banayega, toh port pehle se busy hoga.
+        # Hum is error ko ignore kar denge taaki crash na ho.
+        print(f"Port {port} already in use, skipping dummy server for this process.")
+        pass
 
 # Start the dummy server in a background thread
 threading.Thread(target=start_dummy_server, daemon=True).start()
@@ -34,8 +39,6 @@ load_dotenv()
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
-# 1. OPTIMIZATION: VAD Model ko global scope mein pehle hi load kar rahe hain.
-# Isse jab user "Start" dabayega, toh model ready milega aur delay khatam ho jayega.
 print("--> Loading Silero VAD Model into memory...")
 SHARED_VAD = silero.VAD.load(min_silence_duration=0.5)
 print("--> VAD Model Loaded Successfully!")
@@ -64,17 +67,14 @@ async def entrypoint(ctx: JobContext):
         tts=tts_plugin
     )
 
-    # NAYA TEACHER PROMPT YAHAN UPDATE KIYA GAYA HAI
     agent = Agent(
         instructions=(
             "You are a friendly, expert, and encouraging AI tutor. Your goal is to help the student learn effectively. "
-            "You are an intelligent and helpful AI assistant. "
             "CRITICAL RULE: When a user asks a question, YOU MUST DIRECTLY PROVIDE THE ANSWER FIRST. "
             "DO NOT reply with a counter-question or say 'Let's start with...'. "
             "Follow this exact format for every response: "
             "1. DIRECT ANSWER: Give a clear, factual answer in 1-2 sentences immediately. "
-            "2. Answer: Give a clear, factual answer in 1-2 sentences immediately. (Do not literally say 'Answer:' or 'Direct Answer:') "
-            "3. EXPLANATION: Add a tiny bit of context or an interesting fact. "
+            "2. EXPLANATION: Add a tiny bit of context or an interesting fact. "
             "Keep it completely conversational and very short."
         )
     )
