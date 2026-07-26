@@ -13,28 +13,30 @@ from livekit.agents import (
 # Deepgram ko import kiya gaya hai TTS ke liye
 from livekit.plugins import openai, silero, deepgram
 
-# --- DUMMY SERVER HACK FOR RENDER FREE TIER ---
+# --- OPTIMIZED DUMMY SERVER FOR RENDER FREE TIER ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
         self.end_headers()
-        self.wfile.write(b"Socratic AI Worker is Alive and Running!")
+        self.wfile.write(b"OK")
+    
+    # Disable logs to save CPU and memory overhead
+    def log_message(self, format, *args):
+        pass
 
 def start_dummy_server():
     port = int(os.environ.get("PORT", 10000))
     try:
         server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
         server.serve_forever()
-    except OSError:
-        # Jab LiveKit naya worker banayega, toh port pehle se busy hoga.
-        # Hum is error ko ignore kar denge taaki crash na ho.
-        print(f"Port {port} already in use, skipping dummy server for this process.")
+    except Exception:
         pass
 
-# Start the dummy server in a background thread
-threading.Thread(target=start_dummy_server, daemon=True).start()
-# ----------------------------------------------
+# Run only in the main thread to prevent redundant server bindings
+if __name__ == "__main__":
+    if len(sys.argv) == 1 or "start" in sys.argv:
+        threading.Thread(target=start_dummy_server, daemon=True).start()
+# ---------------------------------------------------
 
 load_dotenv()
 
@@ -65,7 +67,6 @@ async def entrypoint(ctx: JobContext):
     )
     
     # 3. TTS (Aawaz) - Deepgram ka natural voice model (Asteria = Female Voice)
-    # Note: Deepgram auto-detects DEEPGRAM_API_KEY from environment variables
     tts_plugin = deepgram.TTS(
         model="aura-asteria-en" 
     )
@@ -98,7 +99,6 @@ async def entrypoint(ctx: JobContext):
     )
 
 if __name__ == "__main__":
-    # Render par script run hote waqt 'start' command auto-inject karna
     if len(sys.argv) == 1:
         sys.argv.append("start")
         
