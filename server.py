@@ -23,12 +23,13 @@ app.add_middleware(
 
 # --- DATABASE CONNECTION HELPER ---
 def get_db_connection():
-    return psycopg2.connect(
-        host="localhost",
-        database="tutor_db",
-        user="postgres",
-        password="1234" # Yahan apna password dalein
-    )
+    # Render aur .env se Neon ka URL uthayega
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+    
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL environment variable is not set!")
+        
+    return psycopg2.connect(DATABASE_URL)
 
 # --- PYDANTIC MODELS ---
 class UserAuth(BaseModel):
