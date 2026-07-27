@@ -10,7 +10,7 @@ from livekit.agents import (
     JobContext,
     cli,
 )
-from livekit.plugins import openai, silero, deepgram
+from livekit.plugins import openai, deepgram
 
 load_dotenv()
 
@@ -36,39 +36,31 @@ if __name__ == "__main__" and (len(sys.argv) == 1 or "start" in sys.argv):
     threading.Thread(target=start_dummy_server, daemon=True).start()
 # ---------------------------------------------------
 
-# Groq API Base URL
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-
-print("--> Loading Silero VAD Model into memory...")
-SHARED_VAD = silero.VAD.load(min_silence_duration=0.5)
-print("--> VAD Model Loaded Successfully!")
 
 server = AgentServer()
 
 @server.rtc_session()
 async def entrypoint(ctx: JobContext):
     
-    # 1. STT (Whisper via Groq)
     stt_plugin = openai.STT(
         model="whisper-large-v3", 
         base_url=GROQ_BASE_URL,
         api_key=os.environ.get("GROQ_API_KEY") 
     )
     
-    # 2. LLM (Llama 3 via Groq)
     llm_plugin = openai.LLM(
         model="llama-3.3-70b-versatile", 
         base_url=GROQ_BASE_URL,
         api_key=os.environ.get("GROQ_API_KEY")
     )
     
-    # 3. TTS (Deepgram Aura Voice)
     tts_plugin = deepgram.TTS(
         model="aura-asteria-en" 
     )
 
+    # VAD parameter hata diya hai taaki heavy Silero model RAM load na kare
     session = AgentSession(
-        vad=SHARED_VAD, 
         stt=stt_plugin,
         llm=llm_plugin,
         tts=tts_plugin
