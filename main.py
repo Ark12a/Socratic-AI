@@ -10,8 +10,9 @@ from livekit.agents import (
     JobContext,
     cli,
 )
-# Deepgram ko import kiya gaya hai TTS ke liye
 from livekit.plugins import openai, silero, deepgram
+
+load_dotenv()
 
 # --- OPTIMIZED DUMMY SERVER FOR RENDER FREE TIER ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -20,7 +21,6 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"OK")
     
-    # Disable logs to save CPU and memory overhead
     def log_message(self, format, *args):
         pass
 
@@ -32,13 +32,9 @@ def start_dummy_server():
     except Exception:
         pass
 
-# Run only in the main thread to prevent redundant server bindings
-if __name__ == "__main__":
-    if len(sys.argv) == 1 or "start" in sys.argv:
-        threading.Thread(target=start_dummy_server, daemon=True).start()
+if __name__ == "__main__" and (len(sys.argv) == 1 or "start" in sys.argv):
+    threading.Thread(target=start_dummy_server, daemon=True).start()
 # ---------------------------------------------------
-
-load_dotenv()
 
 # Groq API Base URL
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
@@ -52,21 +48,21 @@ server = AgentServer()
 @server.rtc_session()
 async def entrypoint(ctx: JobContext):
     
-    # 1. STT (Kaan) - Groq ka Whisper model
+    # 1. STT (Whisper via Groq)
     stt_plugin = openai.STT(
         model="whisper-large-v3", 
         base_url=GROQ_BASE_URL,
         api_key=os.environ.get("GROQ_API_KEY") 
     )
     
-    # 2. LLM (Dimaag) - Groq ka Llama 3 model
+    # 2. LLM (Llama 3 via Groq)
     llm_plugin = openai.LLM(
         model="llama-3.3-70b-versatile", 
         base_url=GROQ_BASE_URL,
         api_key=os.environ.get("GROQ_API_KEY")
     )
     
-    # 3. TTS (Aawaz) - Deepgram ka natural voice model (Asteria = Female Voice)
+    # 3. TTS (Deepgram Aura Voice)
     tts_plugin = deepgram.TTS(
         model="aura-asteria-en" 
     )
@@ -79,7 +75,6 @@ async def entrypoint(ctx: JobContext):
     )
 
     agent = Agent(
-        
         instructions=(
             "You are a friendly, expert, and encouraging AI tutor. Your goal is to help the student learn effectively. "
             "CRITICAL RULE: When a user asks a question, YOU MUST DIRECTLY PROVIDE THE ANSWER FIRST. "
