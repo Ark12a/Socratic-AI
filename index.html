@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Socratic AI | Arkadyuti</title>
     
+    <!-- Custom Favicon -->
     <link rel="icon" type="image/png" href="image_09f73d.png">
-    <link rel="icon" type="image/svg+xml" href="https://github.githubassets.com/favicons/favicon.svg">
     
     <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -465,7 +465,7 @@
             }
             
             .developer-badge {
-                display: none; /* Hides on very small screens to save space */
+                display: none;
             }
 
             .welcome-screen {
@@ -734,11 +734,9 @@
                 connectBtn.disabled = true;
                 setStatus("Connecting...", "loading");
                 
-                // FIXED: Har session mein unique participant name bhejna
                 const uniqueId = "student_" + Math.floor(Math.random() * 100000);
-                const uniqueRoom = "tutor_room_" + Math.floor(Math.random() * 100000); // Har baar naya room
+                const uniqueRoom = "tutor_room_" + Math.floor(Math.random() * 100000);
 
-                // API call mein participant name aur room name DONO bhejenge
                 const response = await fetch(`${API_URL}/get-token?participant_name=${uniqueId}&room_name=${uniqueRoom}`);
                 const data = await response.json();
                 
@@ -800,7 +798,6 @@
             }
         };
 
-        // FIXED: Graceful UI reset without page reload
         disconnectBtn.onclick = async () => {
             if (room) {
                 setStatus("Disconnecting...", "loading");
@@ -808,7 +805,6 @@
                 room = null;
             }
             
-            // Clean up the UI
             chatBox.innerHTML = ''; 
             chatBox.style.display = "none";
             
